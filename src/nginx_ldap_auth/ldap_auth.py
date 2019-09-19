@@ -2,6 +2,16 @@ import ldap
 import json
 
 
+def create_from_env():
+    import os
+    auth = LdapAuth(os.environ.get('LDAP_ADDRESS'))
+    auth.base_dn = os.environ.get('LDAP_BASE_DN')
+    auth.bind_dn = os.environ.get('LDAP_BIND_DN')
+    auth.bind_pass = os.environ.get('LDAP_BIND_PASS')
+
+    return auth
+
+
 class LdapAuthException(Exception):
     pass
 
