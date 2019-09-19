@@ -1,5 +1,5 @@
 import os
-import ldap_auth
+from . import ldap_auth
 from flask import Flask
 from flask import request, make_response, jsonify
 from dotenv import load_dotenv, find_dotenv
@@ -30,7 +30,9 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    load_dotenv(find_dotenv('.env', usecwd=True))
+    ENV_FILE = os.environ.get('ENV_FILE', '.env')
+    print('Loading environment from file: ' + ENV_FILE)
+    load_dotenv(find_dotenv(ENV_FILE, usecwd=True))
     app = create_app()
 
     host = os.environ.get('APP_BIND', '127.0.0.1')
