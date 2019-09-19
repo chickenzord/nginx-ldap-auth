@@ -26,13 +26,13 @@ class LdapAuth(object):
         self.search_template = 'uid=%(username)s'
 
     def assert_configs(self):
-        print json.dumps({
+        print(json.dumps({
             'address': self.address,
             'base_dn': self.base_dn,
             'bind_dn': self.bind_dn,
             'bind_pass': '***' if self.bind_pass else None,
             'search_template': self.search_template,
-        })
+        }))
         assert self.address is not None
         assert self.base_dn is not None
         assert self.bind_dn is not None
