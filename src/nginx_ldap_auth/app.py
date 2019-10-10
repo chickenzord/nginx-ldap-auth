@@ -13,7 +13,9 @@ def create_app():
     @app.route('/auth-proxy')
     def basic_auth_check():
         if not request.authorization:
-            return make_response('Authorization required', 401)
+            r = make_response('Authorization required', 401)
+            r.headers['WWW-Authenticate'] = 'Basic realm="LDAP login", charset="UTF-8"'
+            return r
 
         username = request.authorization['username']
         password = request.authorization['password']
