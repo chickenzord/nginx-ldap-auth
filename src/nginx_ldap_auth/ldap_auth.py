@@ -44,8 +44,8 @@ class LdapAuth(object):
         try:
             self.ping(username, password)
             return ("OK: "+username, True)
-        except ldap.INVALID_CREDENTIALS as e:
-            return (e.message['desc'], False)
+        except ldap.LDAPError as e:
+            return (e.__class__.__name__, False)
         except Exception as e:
             return (str(e), False)
 

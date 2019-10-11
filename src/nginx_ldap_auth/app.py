@@ -14,7 +14,7 @@ def create_app():
     def basic_auth_check():
 
         def unauthorized(message):
-            r = make_response('Authorization required', 401)
+            r = make_response(message, 401)
             r.headers['WWW-Authenticate'] = 'Basic realm="LDAP login", charset="UTF-8"'
             return r
 
