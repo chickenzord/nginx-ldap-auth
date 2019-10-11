@@ -33,6 +33,23 @@ def create_app():
         else:
             return unauthorized(message)
 
+    @app.route('/ping')
+    def ping():
+        return 'pong'
+
+    @app.route('/status')
+    def status():
+        import socket
+
+        ldap_ok = auth.ping()
+        res = jsonify({
+            'hostname': socket.gethostname(),
+            'ldap_ok': ldap_ok,
+        })
+        res.status_code = 200 if ldap_ok else 500
+
+        return res
+
     return app
 
 if __name__ == '__main__':

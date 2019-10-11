@@ -42,20 +42,30 @@ class LdapAuth(object):
     def check(self, username, password):
         # -> (str msg, bool authorized)
         try:
-            self.ping(username, password)
+            self.whoami(username, password)
             return ("OK: "+username, True)
         except ldap.LDAPError as e:
             return (e.__class__.__name__, False)
         except Exception as e:
             return (str(e), False)
 
-    def ping(self, username, password):
+    def ping(self):
         # initialize
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         l = ldap.initialize(self.address)
+        l.simple_bind_s(self.bind_dn, self.bind_pass)
+
+        whoami = l.whoami_s()
+
+        return whoami is not None and len(whoami) > 0
+
+    def whoami(self, username, password):
+        # initialize
+        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+        l = ldap.initialize(self.address)
+        l.simple_bind_s(self.bind_dn, self.bind_pass)
 
         # search user
-        l.simple_bind_s(self.bind_dn, self.bind_pass)
         search_filter = self.search_template % {'username': username}
         users = l.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
         if len(users) == 0:
@@ -72,4 +82,4 @@ class LdapAuth(object):
         if whoami is None or len(whoami) == 0:
             raise LdapAuthException("Invalid username/password")
 
-        return "pong"
+        return whoami
