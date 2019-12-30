@@ -27,7 +27,7 @@ def create_app():
         if not password or len(password) == 0:
             return unauthorized('Password required')
 
-        message, authorized = auth.check(username, password)
+        message, authorized = auth.check_credentials(username, password)
         if authorized:
             return make_response(message, 200)
         else:
@@ -41,12 +41,14 @@ def create_app():
     def status():
         import socket
 
-        ldap_ok = auth.ping()
+        ldap_reachable = auth.check_connection()
+        ldap_bound = auth.check_binding()
         res = jsonify({
             'hostname': socket.gethostname(),
-            'ldap_ok': ldap_ok,
+            'ldap_bound': ldap_bound,
+            'ldap_reachable': ldap_reachable,
         })
-        res.status_code = 200 if ldap_ok else 500
+        res.status_code = 200 if ldap_reachable and ldap_bound else 500
 
         return res
 

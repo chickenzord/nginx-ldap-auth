@@ -1,5 +1,7 @@
 import ldap
 import json
+import socket
+from urllib.parse import urlparse
 
 
 def create_from_env():
@@ -18,12 +20,15 @@ class LdapAuthException(Exception):
 
 class LdapAuth(object):
 
+
     def __init__(self, address=None):
         self.address = address
         self.base_dn = None
         self.bind_dn = None
         self.bind_pass = None
         self.search_template = 'uid=%(username)s'
+        self.ldap_timeout = 2
+        self.conn_timeout = 2
 
     def assert_configs(self):
         print(json.dumps({
@@ -39,7 +44,7 @@ class LdapAuth(object):
         assert self.bind_pass is not None
         assert self.search_template is not None
 
-    def check(self, username, password):
+    def check_credentials(self, username, password):
         # -> (str msg, bool authorized)
         try:
             self.whoami(username, password)
@@ -49,13 +54,30 @@ class LdapAuth(object):
         except Exception as e:
             return (str(e), False)
 
-    def ping(self):
+    def check_connection(self):
+        address = urlparse(self.address)
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(self.conn_timeout)
+        try:
+            s.connect((address.hostname, int(address.port)))
+            s.shutdown(2)
+            return True
+        except:
+            return False
+
+    def check_binding(self):
         # initialize
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         l = ldap.initialize(self.address)
-        l.simple_bind_s(self.bind_dn, self.bind_pass)
-
-        whoami = l.whoami_s()
+        l.timeout = self.ldap_timeout
+        try:
+            l.simple_bind_s(self.bind_dn, self.bind_pass)
+            whoami = l.whoami_s()
+        except:
+            whoami = None
+        finally:
+            l.unbind_s()
 
         return whoami is not None and len(whoami) > 0
 
@@ -63,21 +85,27 @@ class LdapAuth(object):
         # initialize
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         l = ldap.initialize(self.address)
-        l.simple_bind_s(self.bind_dn, self.bind_pass)
+        l.timeout = self.ldap_timeout
+        try:
+            l.simple_bind_s(self.bind_dn, self.bind_pass)
 
-        # search user
-        search_filter = self.search_template % {'username': username}
-        users = l.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-        if len(users) == 0:
-            msg = "User with username '%s' not found on %s" % (username, self.base_dn)
-            raise LdapAuthException(msg)
-        if len(users) > 1:
-            raise LdapAuthException("Multiple users found")
+            # search user
+            search_filter = self.search_template % {'username': username}
+            users = l.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
+            if len(users) == 0:
+                msg = "User with username '%s' not found on %s" % (username, self.base_dn)
+                raise LdapAuthException(msg)
+            if len(users) > 1:
+                raise LdapAuthException("Multiple users found")
 
-        # try to verify user password
-        user_dn, _ = users[0]
-        l.simple_bind_s(user_dn, password)
-        whoami = l.whoami_s()
+            # try to verify user password
+            user_dn, _ = users[0]
+            l.simple_bind_s(user_dn, password)
+            whoami = l.whoami_s()
+        except:
+            whoami = None
+        finally:
+            l.unbind_s()
 
         if whoami is None or len(whoami) == 0:
             raise LdapAuthException("Invalid username/password")
