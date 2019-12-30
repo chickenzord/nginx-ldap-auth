@@ -1,8 +1,13 @@
 import os
+import prometheus_client
+import socket
 from . import ldap_auth
+from . import ldap_metrics
 from flask import Flask
-from flask import request, make_response, jsonify
+from flask import request, make_response, jsonify, Response
 from dotenv import load_dotenv, find_dotenv
+
+
 
 
 def create_app():
@@ -29,29 +34,61 @@ def create_app():
 
         message, authorized = auth.check_credentials(username, password)
         if authorized:
+            (ldap_metrics
+                    .auth_success
+                    .labels(hostname=socket.gethostname(),
+                            server=auth.address)
+                    .inc())
             return make_response(message, 200)
         else:
+            (ldap_metrics
+                    .auth_failure
+                    .labels(hostname=socket.gethostname(),
+                            server=auth.address)
+                    .inc())
             return unauthorized(message)
 
     @app.route('/ping')
     def ping():
         return 'pong'
 
-    @app.route('/status')
-    def status():
-        import socket
-
+    def _fetch_status():
         ldap_reachable = auth.check_connection()
         ldap_bound = auth.check_binding()
-        res = jsonify({
+        return {
             'hostname': socket.gethostname(),
             'ldap_address': auth.address,
             'ldap_bound': ldap_bound,
             'ldap_reachable': ldap_reachable,
-        })
-        res.status_code = 200 if ldap_reachable and ldap_bound else 500
+        }
+
+    @app.route('/status')
+    def status():
+        stat = _fetch_status()
+
+        res = jsonify(stat)
+        if stat['ldap_reachable'] and stat['ldap_bound']:
+            res.status_code = 200
+        else:
+            res.status_code = 500
 
         return res
+
+    @app.route('/metrics')
+    def metrics():
+        stat = _fetch_status()
+
+        (ldap_metrics.server_reachable
+            .labels(hostname=stat['hostname'],
+                    server=stat['ldap_address'])
+            .set(stat['ldap_reachable']))
+
+        (ldap_metrics.server_bound
+            .labels(hostname=stat['hostname'],
+                    server=stat['ldap_address'])
+            .set(stat['ldap_bound']))
+
+        return Response(prometheus_client.generate_latest())
 
     return app
 
