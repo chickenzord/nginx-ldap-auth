@@ -45,6 +45,7 @@ def create_app():
         ldap_bound = auth.check_binding()
         res = jsonify({
             'hostname': socket.gethostname(),
+            'ldap_address': auth.address,
             'ldap_bound': ldap_bound,
             'ldap_reachable': ldap_reachable,
         })
