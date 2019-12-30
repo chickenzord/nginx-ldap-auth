@@ -1,6 +1,7 @@
 import os
 import prometheus_client
 import socket
+from . import __version__
 from . import ldap_auth
 from . import ldap_metrics
 from flask import Flask
@@ -56,6 +57,7 @@ def create_app():
         ldap_reachable = auth.check_connection()
         ldap_bound = auth.check_binding()
         return {
+            'version': 'nginx_ldap_auth v'+__version__,
             'hostname': socket.gethostname(),
             'ldap_address': auth.address,
             'ldap_bound': ldap_bound,

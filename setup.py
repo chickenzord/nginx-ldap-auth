@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+
 from setuptools import find_packages, setup
+import nginx_ldap_auth
 
 REPO_NAME = 'chickenzord/nginx-ldap-auth'
-VERSION = '0.1.0'
+VERSION = nginx_ldap_auth.__version__
 ARCHIVE_URL = 'https://github.com/%s/archive/v%s.tar.gz' % (REPO_NAME, VERSION)
 
 
