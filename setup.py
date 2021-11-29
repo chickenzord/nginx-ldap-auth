@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'Flask==1.1.1',
         'python-dotenv==0.10.3',
-        'python-ldap==3.2.0',
+        'python-ldap==3.4.0',
         'prometheus_client==0.7.1',
     ],
     entry_points={
